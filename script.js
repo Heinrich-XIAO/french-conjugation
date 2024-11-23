@@ -1,15 +1,15 @@
 import * as FrenchVerbs from 'french-verbs';
 import * as Lefff from 'french-verbs-lefff/dist/conjugations.json';
 const allVerbs = Object.keys(Lefff);
+
+let progress = JSON.parse(localStorage.getItem('progress')) || {};
+let verb;
 let correct;
 
 function getRandomVerb() {
-	// 10% time each, choose aller, vouloir, avoir, etre, pouvoir, devoir and other common french-verbs
-	const commonVerbs = ['aller', 'avoir', 'être', 'pouvoir', 'devoir', 'vouloir'];
-	if (Math.random() < 0.5) {
-		return commonVerbs[Math.floor(Math.random() * commonVerbs.length)];
-	}
-	return allVerbs[Math.floor(Math.random() * allVerbs.length)];
+	const commonVerbs = ['aller', 'avoir', 'pouvoir', 'devoir', 'vouloir'];
+	return commonVerbs[Math.floor(Math.random() * commonVerbs.length)];
+	// return allVerbs[Math.floor(Math.random() * allVerbs.length)];
 }
 
 function getRandomSubject() {
@@ -27,9 +27,30 @@ const submitAnswer = (event) => {
 	}
 	if (answer === correct) {
 		document.getElementById('information').innerText = 'Correct!';
+		if (progress[verb] === undefined) {
+			progress[verb] = {
+				total: 1,
+				correct: 1
+			};
+		} else {
+			progress[verb]['total']++;
+			progress[verb]['correct']++;
+		}
+		localStorage.setItem('progress', JSON.stringify(progress));
+		console.log(progress);
 		eventHandler();
 	} else {
 		document.getElementById('information').innerText = 'Wrong! The correct answer is: ' + correct;
+		if (progress[verb] === undefined) {
+			progress[verb] = {
+				total: 1,
+				correct: 0
+			};
+		} else {
+			progress[verb]['total']++;
+		}
+		localStorage.setItem('progress', JSON.stringify(progress));
+		console.log(progress);
 	}
 	document.getElementById('answer').value = "";
 }
@@ -47,21 +68,39 @@ function personToString(person) {
 	}
 }
 
+function subjectToConjugationPerson(person, amount) {
+	// Conjugation indicates the person: 0=je, 1=tu, 2=il/elle, 3=nous, 4=vous, 5=ils/elles.
+	switch (person) {
+		case 1:
+			return amount == 'P' ? 3 : 0;
+		case 2:
+			return amount == 'P' ? 4 : 1;
+		case 3:
+			return amount == 'P' ? 5 : 2;
+	}
+}
+
+const subjectToExample = (person, amount) => {
+	switch (person) {
+		case 1:
+			return amount == 'P' ? 'nous' : 'je';
+		case 2:
+			return amount == 'P' ? 'vous' : 'tu';
+		case 3:
+			return amount == 'P' ? 'ils' : 'il';
+	}
+}
+
 const eventHandler = () => {
 	const tense = document.getElementById('tense').value;
-	let [person, amount] = getRandomSubject();
-	let verb = getRandomVerb();
-	verb = "être";
-	amount = "P";
-	document.getElementById('information').innerText = `Conjugate ${verb} for ${personToString(person)} person ${amount == 'P' ? 'plural': 'singular'}.`;
-	const conjugation = FrenchVerbs.getConjugation(Lefff, verb, tense, person-1, { agreeNumber: amount });
+	const [person, amount] = getRandomSubject();
+	verb = getRandomVerb();
+	document.getElementById('information').innerText = `Conjugate ${verb} for ${personToString(person)} person ${amount == 'P' ? 'plural': 'singular'} (e.g. ${subjectToExample(person, amount)}).`;
+	const conjugation = FrenchVerbs.getConjugation(Lefff, verb, tense, subjectToConjugationPerson(person, amount));
 	correct = conjugation;
 	document.getElementById('answer').value = "";
 }
 
 document.getElementById('tense').addEventListener('input', eventHandler);
 document.querySelector('form').addEventListener('submit', submitAnswer);
-
 eventHandler();
-	const conjugation = FrenchVerbs.getConjugation(Lefff, 'avoir', 'PRESENT', 1, { agreeNumber: 'P' });
-console.log(conjugation);
